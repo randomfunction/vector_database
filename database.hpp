@@ -15,12 +15,38 @@ struct SearchResult{
     string metadata;
 };
 
+template<class T>
+struct AlignedAllocator{
+    using value_type=T;
+    AlignedAllocator()noexcept{}
+    template<class U>AlignedAllocator(const AlignedAllocator<U>&)noexcept{}
+    T* allocate(size_t n){
+        size_t alignment=64;
+        size_t bytes=n*sizeof(T);
+        size_t remainder=bytes%alignment;
+        if(remainder!=0){
+            bytes+=alignment-remainder;
+        }
+        void* p=aligned_alloc(alignment,bytes);
+        if(!p){
+            throw bad_alloc();
+        }
+        return static_cast<T*>(p);
+    }
+    void deallocate(T* p,size_t)noexcept{
+        free(p);
+    }
+    template<class U>bool operator==(const AlignedAllocator<U>&)const noexcept{return true;}
+    template<class U>bool operator!=(const AlignedAllocator<U>&)const noexcept{return false;}
+};
+
 class Engine{
     unordered_map<string,int> uuid_to_id;
     vector<string> id_to_uuid;
-    vector<vector<float>> vectors;
+    vector<float,AlignedAllocator<float>> flat_vectors;
     vector<string> metadata;
     MetricType metric;
+    int dim;
     mutable shared_mutex rw_lock;
 
     public:
@@ -34,8 +60,8 @@ class Engine{
     void set_metric(MetricType m);
 
     private:
-    float compute_distance(const vector<float>&a,const vector<float>&b) const;
-    float squared_eucledian_distance(const vector<float>&a,const vector<float>&b) const;
-    float dot_product(const vector<float>&a,const vector<float>&b) const;
-    float cosine_similarity(const vector<float>&a,const vector<float>&b) const;
+    float compute_distance(const float*a,const vector<float>&b) const;
+    float squared_eucledian_distance(const float*a,const vector<float>&b) const;
+    float dot_product(const float*a,const vector<float>&b) const;
+    float cosine_similarity(const float*a,const vector<float>&b) const;
 };

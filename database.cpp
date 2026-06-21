@@ -2,6 +2,7 @@
 
 Engine::Engine(MetricType m){
     metric=m;
+    dim=0;
 }
 
 void Engine::set_metric(MetricType m){
@@ -14,10 +15,16 @@ void Engine::insert(const string&uuid,const vector<float>&emb,const string&data)
     if(uuid_to_id.count(uuid)){
         return;
     }
-    int newid=vectors.size();
+    if(dim==0){
+        dim=emb.size();
+    }
+    else if(emb.size()!=dim){
+        return;
+    }
+    int newid=id_to_uuid.size();
     uuid_to_id[uuid]=newid;
     id_to_uuid.push_back(uuid);
-    vectors.push_back(emb);
+    flat_vectors.insert(flat_vectors.end(),emb.begin(),emb.end());
     metadata.push_back(data);
 }
 
@@ -26,8 +33,13 @@ void Engine::update(const string&uuid,const vector<float>&emb,const string&data)
     if(!uuid_to_id.count(uuid)){
         return;
     }
+    if(emb.size()!=dim){
+        return;
+    }
     int id=uuid_to_id[uuid];
-    vectors[id]=emb;
+    for(int i=0;i<dim;i++){
+        flat_vectors[id*dim+i]=emb[i];
+    }
     metadata[id]=data;
 }
 
@@ -37,42 +49,44 @@ void Engine::remove(const string&uuid){
         return;
     }
     int id=uuid_to_id[uuid];
-    int last_id=vectors.size()-1;
+    int last_id=id_to_uuid.size()-1;
     if(id!=last_id){
         string last_uuid=id_to_uuid[last_id];
-        vectors[id]=move(vectors[last_id]);
+        for(int i=0;i<dim;i++){
+            flat_vectors[id*dim+i]=flat_vectors[last_id*dim+i];
+        }
         metadata[id]=move(metadata[last_id]);
         id_to_uuid[id]=move(last_uuid);
         uuid_to_id[last_uuid]=id;
     }
-    vectors.pop_back();
+    flat_vectors.resize(last_id*dim);
     metadata.pop_back();
     id_to_uuid.pop_back();
     uuid_to_id.erase(uuid);
+    if(id_to_uuid.size()==0){
+        dim=0;
+    }
 }
 
-float Engine::squared_eucledian_distance(const vector<float>&a,const vector<float>&b) const{
+float Engine::squared_eucledian_distance(const float*a,const vector<float>&b) const{
     float res=0;
-    int n=a.size();
-    for(int i=0;i<n;i++){
+    for(int i=0;i<dim;i++){
         res+=(a[i]-b[i])*(a[i]-b[i]);
     }
     return res;
 }
 
-float Engine::dot_product(const vector<float>&a,const vector<float>&b) const{
+float Engine::dot_product(const float*a,const vector<float>&b) const{
     float ans=0;
-    int n=a.size();
-    for(int i=0;i<n;i++){
+    for(int i=0;i<dim;i++){
         ans+=a[i]*b[i];
     }
     return ans;
 }
 
-float Engine::cosine_similarity(const vector<float>&a,const vector<float>&b) const{
+float Engine::cosine_similarity(const float*a,const vector<float>&b) const{
     float dot=0,normA=0,normB=0;
-    int n=a.size();
-    for(int i=0;i<n;i++){
+    for(int i=0;i<dim;i++){
         dot+=a[i]*b[i];
         normA+=a[i]*a[i];
         normB+=b[i]*b[i];
@@ -83,7 +97,7 @@ float Engine::cosine_similarity(const vector<float>&a,const vector<float>&b) con
     return dot/(sqrt(normA)*sqrt(normB));
 }
 
-float Engine::compute_distance(const vector<float>&a,const vector<float>&b) const{
+float Engine::compute_distance(const float*a,const vector<float>&b) const{
     if(metric==MetricType::L2){
         return squared_eucledian_distance(a,b);
     }
@@ -98,12 +112,16 @@ float Engine::compute_distance(const vector<float>&a,const vector<float>&b) cons
 
 vector<SearchResult> Engine::search(const vector<float>&query,int k){
     shared_lock<shared_mutex> lock(rw_lock);
-    if(vectors.size()==0){
+    if(id_to_uuid.size()==0){
+        return {};
+    }
+    if(query.size()!=dim){
         return {};
     }
     priority_queue<pair<float,int>> pq;
-    for(int i=0;i<vectors.size();i++){
-        float dist=compute_distance(vectors[i],query);
+    int n=id_to_uuid.size();
+    for(int i=0;i<n;i++){
+        float dist=compute_distance(&flat_vectors[i*dim],query);
         pq.push({dist,i});
         if(pq.size()>k){
             pq.pop();
@@ -128,18 +146,17 @@ void Engine::save_to_file(const string&filename){
     }
     int m_type=static_cast<int>(metric);
     file.write(reinterpret_cast<const char*>(&m_type),sizeof(m_type));
-    int n=vectors.size();
+    int n=id_to_uuid.size();
     file.write(reinterpret_cast<const char*>(&n),sizeof(n));
     if(n==0){
         return;
     }
-    int dimensions=vectors[0].size();
-    file.write(reinterpret_cast<const char*>(&dimensions),sizeof(dimensions));
+    file.write(reinterpret_cast<const char*>(&dim),sizeof(dim));
     for(int i=0;i<n;i++){
         int uuid_len=id_to_uuid[i].size();
         file.write(reinterpret_cast<const char*>(&uuid_len),sizeof(uuid_len));
         file.write(id_to_uuid[i].data(),uuid_len);
-        file.write(reinterpret_cast<const char*>(vectors[i].data()),dimensions*sizeof(float));
+        file.write(reinterpret_cast<const char*>(&flat_vectors[i*dim]),dim*sizeof(float));
         int meta_len=metadata[i].size();
         file.write(reinterpret_cast<const char*>(&meta_len),sizeof(meta_len));
         file.write(metadata[i].data(),meta_len);
@@ -153,7 +170,7 @@ void Engine::load_from_file(const string&filename){
     if(!file.is_open()){
         return;
     }
-    vectors.clear();
+    flat_vectors.clear();
     metadata.clear();
     uuid_to_id.clear();
     id_to_uuid.clear();
@@ -163,26 +180,26 @@ void Engine::load_from_file(const string&filename){
     int n=0;
     file.read(reinterpret_cast<char*>(&n),sizeof(n));
     if(n==0){
+        dim=0;
         file.close();
         return;
     }
-    int dimensions=0;
-    file.read(reinterpret_cast<char*>(&dimensions),sizeof(dimensions));
+    file.read(reinterpret_cast<char*>(&dim),sizeof(dim));
     for(int i=0;i<n;i++){
         int uuid_len=0;
         file.read(reinterpret_cast<char*>(&uuid_len),sizeof(uuid_len));
         string uuid(uuid_len,'\0');
         file.read(&uuid[0],uuid_len);
-        vector<float> vec(dimensions);
-        file.read(reinterpret_cast<char*>(vec.data()),dimensions*sizeof(float));
+        int newid=id_to_uuid.size();
+        uuid_to_id[uuid]=newid;
+        id_to_uuid.push_back(uuid);
+        vector<float> vec(dim);
+        file.read(reinterpret_cast<char*>(vec.data()),dim*sizeof(float));
+        flat_vectors.insert(flat_vectors.end(),vec.begin(),vec.end());
         int meta_len=0;
         file.read(reinterpret_cast<char*>(&meta_len),sizeof(meta_len));
         string meta(meta_len,'\0');
         file.read(&meta[0],meta_len);
-        int newid=vectors.size();
-        uuid_to_id[uuid]=newid;
-        id_to_uuid.push_back(uuid);
-        vectors.push_back(vec);
         metadata.push_back(meta);
     }
     file.close();
