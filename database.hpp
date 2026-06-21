@@ -1,6 +1,7 @@
 #pragma once
 #include<bits/stdc++.h>
 #include<shared_mutex>
+#include<immintrin.h>
 using namespace std;
 
 enum class MetricType{
@@ -60,6 +61,7 @@ class Engine{
     void set_metric(MetricType m);
 
     private:
+    float sum256(__m256 x) const;
     float compute_distance(const float*a,const vector<float>&b) const;
     float squared_eucledian_distance(const float*a,const vector<float>&b) const;
     float dot_product(const float*a,const vector<float>&b) const;
