@@ -17,13 +17,16 @@ void Engine::set_metric(MetricType m){
 void Engine::reserve(size_t max_elements){
     unique_lock<shared_mutex> lock(rw_lock);
     max_capacity=max_elements;
+
     metadata.reserve(max_elements);
     active.reserve(max_elements);
     nodes.reserve(max_elements);
     id_to_uuid.reserve(max_elements);
     uuid_to_id.reserve(max_elements);
+
     size_t avg_edges=(M_max_0+2)+2*(M+2);
     flat_edges.reserve(max_elements*avg_edges);
+
     if(dim>0){
         flat_vectors.reserve(max_elements*dim);
     }
@@ -47,6 +50,7 @@ float Engine::dot_product(const float*a,const float*b) const{
 
 float Engine::cosine_similarity(const float*a,const float*b) const{
     float dot=0,normA=0,normB=0;
+    
     for(int i=0;i<dim;i++){
         dot+=a[i]*b[i];
         normA+=a[i]*a[i];
@@ -62,10 +66,10 @@ float Engine::compute_distance(const float*a,const float*b) const{
     if(metric==MetricType::L2){
         return squared_eucledian_distance(a,b);
     }
-    if(metric==MetricType::DOT){
+    else if(metric==MetricType::DOT){
         return -dot_product(a,b);
     }
-    if(metric==MetricType::COSINE){
+    else if(metric==MetricType::COSINE){
         return -cosine_similarity(a,b);
     }
     return 0;
@@ -98,21 +102,28 @@ void Engine::search_layer(const float*query,int entry_point_id,int ef,int layer,
     thread_local vector<pair<float,int>> candidates;
     thread_local vector<uint32_t> visited_array;
     thread_local uint32_t visited_version=0;
+
     if(visited_array.size()<=nodes.size()){
         visited_array.resize(nodes.size()+1000,0);
     }
+
     visited_version++;
     if(visited_version==0){
         fill(visited_array.begin(),visited_array.end(),0);
         visited_version=1;
     }
+
     candidates.clear();
     top_candidates.clear();
+
     float ep_dist=compute_distance(&flat_vectors[entry_point_id*dim],query);
+    
     candidates.push_back({ep_dist,entry_point_id});
     top_candidates.push_back({ep_dist,entry_point_id});
     visited_array[entry_point_id]=visited_version;
+
     auto comp_greater=[](const pair<float,int>&a,const pair<float,int>&b){return a.first>b.first;};
+    
     while(!candidates.empty()){
         pop_heap(candidates.begin(),candidates.end(),comp_greater);
         auto [c_dist,c_id]=candidates.back();
@@ -130,8 +141,10 @@ void Engine::search_layer(const float*query,int entry_point_id,int ef,int layer,
                 if(top_candidates.size()<ef||n_dist<top_candidates.front().first){
                     candidates.push_back({n_dist,neighbor_id});
                     push_heap(candidates.begin(),candidates.end(),comp_greater);
+                    
                     top_candidates.push_back({n_dist,neighbor_id});
                     push_heap(top_candidates.begin(),top_candidates.end());
+                    
                     if(top_candidates.size()>ef){
                         pop_heap(top_candidates.begin(),top_candidates.end());
                         top_candidates.pop_back();
@@ -148,18 +161,23 @@ void Engine::prune_connections(int node_id,int layer,int max_conn){
     if(count<=max_conn){
         return;
     }
+
     thread_local vector<pair<float,int>> pq;
     pq.clear();
+
     for(int i=1;i<=count;i++){
         int neighbor_id=edges[i];
         float dist=compute_distance(&flat_vectors[node_id*dim],&flat_vectors[neighbor_id*dim]);
+        
         pq.push_back({dist,neighbor_id});
         push_heap(pq.begin(),pq.end());
+        
         if(pq.size()>max_conn){
             pop_heap(pq.begin(),pq.end());
             pq.pop_back();
         }
     }
+
     edges[0]=pq.size();
     for(int i=0;i<pq.size();i++){
         edges[i+1]=pq[i].second;
@@ -168,8 +186,10 @@ void Engine::prune_connections(int node_id,int layer,int max_conn){
 
 void Engine::insert(const string&uuid,const vector<float>&emb,const string&data){
     unique_lock<shared_mutex> lock(rw_lock);
+    
     if(uuid_to_id.count(uuid)){
         int id=uuid_to_id[uuid];
+        
         if(!active[id]){
             active[id]=true;
             for(int i=0;i<dim;i++){
@@ -178,10 +198,12 @@ void Engine::insert(const string&uuid,const vector<float>&emb,const string&data)
             metadata[id]=data;
             return;
         }
+        
         return;
     }
     if(dim==0){
         dim=emb.size();
+
         flat_vectors.reserve(max_capacity*dim);
         if(nodes.capacity()<max_capacity){
             metadata.reserve(max_capacity);
@@ -192,10 +214,12 @@ void Engine::insert(const string&uuid,const vector<float>&emb,const string&data)
             size_t avg_edges=(M_max_0+2)+2*(M+2);
             flat_edges.reserve(max_capacity*avg_edges);
         }
+
     }
     else if(emb.size()!=dim){
         return;
     }
+
     int new_id=id_to_uuid.size();
     uuid_to_id[uuid]=new_id;
     id_to_uuid.push_back(uuid);
@@ -235,14 +259,25 @@ void Engine::insert(const string&uuid,const vector<float>&emb,const string&data)
     
     for(int level=min(l,curr_max_layer);level>=0;level--){
         search_layer(emb.data(),curr_ep,ef_construction,level,top_k_queue);
-        int max_conn=(level==0)?M_max_0:M;
+        
+        int max_conn;
+        if(level=0){
+            max_conn=M_max_0;
+        }
+        else{
+            max_conn=M;
+        }
+        
         thread_local vector<int> selected_neighbors;
         selected_neighbors.clear();
+        
         sort(top_k_queue.begin(),top_k_queue.end());
         for(int i=0;i<top_k_queue.size()&&selected_neighbors.size()<max_conn;i++){
             selected_neighbors.push_back(top_k_queue[i].second);
         }
+
         set_edges(new_id,level,selected_neighbors);
+        
         for(int n_id:selected_neighbors){
             int* n_edges=get_edges(n_id,level);
             n_edges[0]++;
@@ -262,22 +297,40 @@ void Engine::insert(const string&uuid,const vector<float>&emb,const string&data)
 
 vector<SearchResult> Engine::search(const vector<float>&query,int k){
     shared_lock<shared_mutex> lock(rw_lock);
+    
     if(nodes.empty()||query.size()!=dim){
         return {};
     }
+    
     int curr_ep=ep_id;
+    
     thread_local vector<pair<float,int>> top_k_queue;
+    
     for(int l=max_layer;l>0;l--){
         search_layer(query.data(),curr_ep,1,l,top_k_queue);
         curr_ep=top_k_queue.front().second;
     }
+    
     int ef=max(ef_search,k);
+    
     search_layer(query.data(),curr_ep,ef,0,top_k_queue);
+    
     sort(top_k_queue.begin(),top_k_queue.end());
     vector<SearchResult> res;
+    
     for(auto p:top_k_queue){
         if(active[p.second]){
             float real_dist=(metric==MetricType::L2)?p.first:-p.first;
+            if(metric==MetricType::L2){
+                real_dis=p.first;
+            }
+            else if(metric==MetricType::DOT_PRODUCT){
+                real_dis=-p.first;
+            }
+            else if(metric==MetricType::COSINE){
+                real_dis=(1.0f-p.first);
+            }
+
             res.push_back({id_to_uuid[p.second],real_dist,metadata[p.second]});
             if(res.size()==k){
                 break;
@@ -310,107 +363,4 @@ void Engine::remove(const string&uuid){
     }
     int id=uuid_to_id[uuid];
     active[id]=false;
-}
-
-void Engine::save_to_file(const string&filename){
-    shared_lock<shared_mutex> lock(rw_lock);
-    ofstream file(filename,ios::out|ios::binary);
-    if(!file.is_open()){
-        return;
-    }
-    int m_type=static_cast<int>(metric);
-    file.write(reinterpret_cast<const char*>(&m_type),sizeof(m_type));
-    int n=id_to_uuid.size();
-    file.write(reinterpret_cast<const char*>(&n),sizeof(n));
-    if(n==0){
-        return;
-    }
-    file.write(reinterpret_cast<const char*>(&dim),sizeof(dim));
-    file.write(reinterpret_cast<const char*>(&ep_id),sizeof(ep_id));
-    file.write(reinterpret_cast<const char*>(&max_layer),sizeof(max_layer));
-    for(int i=0;i<n;i++){
-        int uuid_len=id_to_uuid[i].size();
-        file.write(reinterpret_cast<const char*>(&uuid_len),sizeof(uuid_len));
-        file.write(id_to_uuid[i].data(),uuid_len);
-        file.write(reinterpret_cast<const char*>(&flat_vectors[i*dim]),dim*sizeof(float));
-        int meta_len=metadata[i].size();
-        file.write(reinterpret_cast<const char*>(&meta_len),sizeof(meta_len));
-        file.write(metadata[i].data(),meta_len);
-        bool act=active[i];
-        file.write(reinterpret_cast<const char*>(&act),sizeof(act));
-        int max_l=nodes[i].max_layer;
-        file.write(reinterpret_cast<const char*>(&max_l),sizeof(max_l));
-        int edge_off=nodes[i].edge_offset;
-        file.write(reinterpret_cast<const char*>(&edge_off),sizeof(edge_off));
-    }
-    int edges_size=flat_edges.size();
-    file.write(reinterpret_cast<const char*>(&edges_size),sizeof(edges_size));
-    if(edges_size>0){
-        file.write(reinterpret_cast<const char*>(flat_edges.data()),edges_size*sizeof(int));
-    }
-    file.close();
-}
-
-void Engine::load_from_file(const string&filename){
-    unique_lock<shared_mutex> lock(rw_lock);
-    ifstream file(filename,ios::in|ios::binary);
-
-    if(!file.is_open()){
-        return;
-    }
-    
-    flat_vectors.clear();
-    metadata.clear();
-    uuid_to_id.clear();
-    id_to_uuid.clear();
-    active.clear();
-    nodes.clear();
-    flat_edges.clear();
-    int m_type=0;
-    file.read(reinterpret_cast<char*>(&m_type),sizeof(m_type));
-    metric=static_cast<MetricType>(m_type);
-    int n=0;
-    file.read(reinterpret_cast<char*>(&n),sizeof(n));
-    if(n==0){
-        dim=0;
-        ep_id=-1;
-        max_layer=-1;
-        file.close();
-        return;
-    }
-    file.read(reinterpret_cast<char*>(&dim),sizeof(dim));
-    file.read(reinterpret_cast<char*>(&ep_id),sizeof(ep_id));
-    file.read(reinterpret_cast<char*>(&max_layer),sizeof(max_layer));
-    for(int i=0;i<n;i++){
-        int uuid_len=0;
-        file.read(reinterpret_cast<char*>(&uuid_len),sizeof(uuid_len));
-        string uuid(uuid_len,'\0');
-        file.read(&uuid[0],uuid_len);
-        int newid=id_to_uuid.size();
-        uuid_to_id[uuid]=newid;
-        id_to_uuid.push_back(uuid);
-        vector<float> vec(dim);
-        file.read(reinterpret_cast<char*>(vec.data()),dim*sizeof(float));
-        flat_vectors.insert(flat_vectors.end(),vec.begin(),vec.end());
-        int meta_len=0;
-        file.read(reinterpret_cast<char*>(&meta_len),sizeof(meta_len));
-        string meta(meta_len,'\0');
-        file.read(&meta[0],meta_len);
-        metadata.push_back(meta);
-        bool act=false;
-        file.read(reinterpret_cast<char*>(&act),sizeof(act));
-        active.push_back(act);
-        HNSWNode node;
-        node.id=newid;
-        file.read(reinterpret_cast<char*>(&node.max_layer),sizeof(node.max_layer));
-        file.read(reinterpret_cast<char*>(&node.edge_offset),sizeof(node.edge_offset));
-        nodes.push_back(node);
-    }
-    int edges_size=0;
-    file.read(reinterpret_cast<char*>(&edges_size),sizeof(edges_size));
-    if(edges_size>0){
-        flat_edges.resize(edges_size);
-        file.read(reinterpret_cast<char*>(flat_edges.data()),edges_size*sizeof(int));
-    }
-    file.close();
 }
