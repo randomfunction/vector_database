@@ -5,7 +5,7 @@
 int main(){
     int num_vectors=20000;
     int dim=256;
-    int num_queries=1000;
+    int num_queries=10000;
     
     cout<<"GENERATING "<<num_vectors<<" VECTORS OF DIMENSION "<<dim<<"..."<<endl;
     mt19937 gen(42);

@@ -19,7 +19,7 @@ struct SearchResult{
 struct HNSWNode{
     int id;
     int max_layer;
-    vector<vector<int>> neighbors;
+    int edge_offset;
 };
 
 template<class T>
@@ -54,6 +54,7 @@ class Engine{
     vector<string> metadata;
     vector<bool> active;
     vector<HNSWNode> nodes;
+    vector<int,AlignedAllocator<int>> flat_edges;
     MetricType metric;
     int dim;
     mutable shared_mutex rw_lock;
@@ -81,6 +82,10 @@ class Engine{
     float squared_eucledian_distance(const float*a,const float*b) const;
     float dot_product(const float*a,const float*b) const;
     float cosine_similarity(const float*a,const float*b) const;
-    priority_queue<pair<float,int>> search_layer(const float*query,int entry_point_id,int ef,int layer);
+    int get_edge_offset(int node_offset,int layer) const;
+    int* get_edges(int node_id,int layer);
+    const int* get_edges(int node_id,int layer) const;
+    void set_edges(int node_id,int layer,const vector<int>&edges);
+    void search_layer(const float*query,int entry_point_id,int ef,int layer,vector<pair<float,int>>&top_candidates) const;
     void prune_connections(int node_id,int layer,int max_conn);
 };
