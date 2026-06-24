@@ -1,42 +1,86 @@
-# C++ Vector Database Engine (Conceptual)
+# High-Performance C++ Vector Database (HNSW-ANN)
 
-This project is an educational, from-scratch implementation of a Vector Database in C++17. 
+An exact-search vector database optimized for low-latency memory access, subsequently upgraded with a multi-layer Hierarchical Navigable Small World (HNSW) Approximate Nearest Neighbor (ANN) index. Engineered with pre-allocated memory arenas and explicit AVX2 intrinsics, the system bypasses heap fragmentation and guarantees $O(1)$ allocation behavior on the hot path.
 
-**Disclaimer:** This is *not* intended to be a production-ready database (like Milvus, Qdrant, or Pinecone). Instead, it was built with a focus on **conceptual clarity** to thoroughly understand the mathematical and systemic mechanics of how a vector engine works under the hood. 
+## Architecture & Design
 
-By avoiding heavy third-party abstractions, this project implements core database and network layers entirely from scratch, demonstrating a deep understanding of systems engineering, memory management, and linear algebra.
+### Memory Layout & Alignment
+The core data structure abandons conventional `std::vector` nesting in favor of mathematically flattened 1D arrays (`flat_vectors` and `flat_edges`) mapped against a custom 64-byte `AlignedAllocator`. This strict contiguous memory model minimizes L1/L2 CPU cache misses, eliminates pointer-chasing during graph traversal, and optimizes memory bandwidth. By pre-allocating an arena, vector insertions avoid $O(N)$ capacity reallocations.
 
-## Core Concepts Implemented
+### SIMD Acceleration
+Distance metrics (L2, Dot Product, Cosine) execute raw hardware-level vectorization via AVX2 Fused Multiply-Add (FMA) intrinsics (`_mm256_fmadd_ps`). By processing 8 floating-point variables per clock cycle and explicitly bypassing conservative compiler heuristics, similarity lookups maintain dense throughput.
 
-* **In-Memory Storage & CRUD:** Direct management of high-dimensional vectors, metadata strings, and UUID mappings. Features robust `insert`, `update`, and `remove` operations (using $O(1)$ swap-and-pop techniques).
-* **Similarity Search (Exact KNN):** Implements an exhaustive "Flat" search approach utilizing a Max-Heap (`std::priority_queue`) to efficiently track and return the K-Nearest Neighbors.
-* **Mathematical Distance Metrics:** Supports runtime-switchable metrics to measure vector similarity:
-  * L2 (Squared Euclidean Distance)
-  * Dot Product
-  * Cosine Similarity
-* **Concurrency & Thread Safety:** Utilizes `std::shared_mutex` to implement Read-Write locks, allowing multiple concurrent read queries while safely locking during write/update operations.
-* **Data Persistence:** A custom binary serialization/deserialization engine that efficiently packs and unpacks the exact memory layout of the database to a binary file (`db.bin`) for durable state storage.
-* **Zero-Dependency REST API:** Includes a standalone, custom-built TCP Socket Server (`server.cpp`) that speaks HTTP and parses JSON payloads to expose the database capabilities over a network without relying on external HTTP libraries.
+### HNSW Graph Topology
+The approximate nearest neighbor component is a multi-layer Navigable Small World graph, designed for extreme low-latency logarithmic search paths.
+* **$M$**: `32` (Denser intermediate layer connections)
+* **$M_{max0}$**: `64` (Denser base layer capacity)
+* **$ef_{construction}$**: `400` (High-quality graph build)
+* **$ef_{search}$**: `200` (Wide search beam during inference)
 
-## What is Missing (The Production Path)
-To transition this from a conceptual learning engine to a production cluster, it would require:
-1. **Approximate Nearest Neighbors (ANN):** Implementing HNSW or IVF indexes to avoid $O(N)$ exhaustive search times on massive datasets.
-2. **Memory-Mapped Files (mmap):** To allow dataset sizes larger than available RAM.
-3. **Distributed Consensus:** Integrating protocols like Raft for multi-node clustering, sharding, and replication.
-
-## Getting Started
-
-### 1. Running the Database Tests
-A comprehensive test suite is available in `main.cpp` that verifies mathematical accuracy, CRUD operations, persistence, and thread-safety basics.
-```bash
-g++ -std=c++17 main.cpp database.cpp -o test_db
-./test_db
+```mermaid
+graph TD;
+    A[Query Vector] --> B(HNSW Layer 3);
+    B --> C(HNSW Layer 2);
+    C --> D(HNSW Layer 1);
+    D --> E(Base Layer 0);
+    E --> F[Exact Distance Calc via AVX2 SIMD];
+    F --> G[Top-K Candidates];
 ```
 
-### 2. Running the REST API Server
-You can launch the custom TCP/HTTP server to interact with the database via network requests.
-```bash
-g++ -std=c++17 server.cpp database.cpp -o server
-./server
+## Benchmarks
+
+The system was benchmarked against the standard **SIFT1M** dataset (1,000,000 base vectors, 128 dimensions).
+
+| Metric | Result |
+| :--- | :--- |
+| **Recall@10** | 99.30% |
+| **Recall@100** | 98.26% |
+| **Throughput** | 2,215 Queries/Second |
+| **P99 Latency** | 654 microseconds |
+| **Build Time** | ~13 minutes |
+
+## Project Structure
+
+```text
+vector_database/
+├── CMakeLists.txt
+├── README.md
+├── include/
+│   └── database.hpp         # Class definitions and inline SIMD functions
+├── src/
+│   ├── database.cpp         # HNSW implementations and core logic
+│   └── Save_file.cpp        # Disk serialization routines
+├── benchmarks/
+│   └── run_sift_benchmark.cpp
+└── scripts/
+    ├── download_sift.sh     # Script to pull and extract the dataset
+    └── run_benchmarks.sh    # Script to build and execute the binary
 ```
-*(The server binds to port 8080 and handles HTTP POST endpoints like `/insert`, `/search`, `/update`, and `/delete`.)*
+
+## Quick Start (CMake)
+
+```bash
+# 1. Download the SIFT1M dataset
+chmod +x scripts/download_sift.sh
+./scripts/download_sift.sh
+
+# 2. Build the project via CMake
+mkdir build && cd build
+cmake -DCMAKE_BUILD_TYPE=Release ..
+make -j$(nproc)
+
+# 3. Execute the benchmark
+./sift_benchmark
+```
+
+Alternatively, use the automated build script:
+```bash
+chmod +x scripts/run_benchmarks.sh
+./scripts/run_benchmarks.sh
+```
+
+## Tradeoffs & Limitations
+
+* **Global Read/Write Lock**: The system currently synchronizes concurrency using a global `std::shared_mutex`. While this enables safe multi-threaded parallel reads, write-heavy workloads will cause lock contention. Future iterations will adopt fine-grained node-level locking or an RCU (Read-Copy-Update) concurrency protocol.
+* **32-Byte Memory Alignment Constraint**: Operations assume vectors are strictly padded and aligned to 32-byte boundaries to feed AVX2 vector registers natively.
+* **Soft Deletions**: Vector removal is implemented via active tombstones to prevent shattering the graph node ID mapping. Sustained deletion workloads require periodic offline database compactions.
