@@ -32,9 +32,24 @@ void Engine::reserve(size_t max_elements){
     }
 }
 
+float Engine::sum256(__m256 x) const{
+    float arr[8];
+    _mm256_storeu_ps(arr,x);
+    return arr[0]+arr[1]+arr[2]+arr[3]+arr[4]+arr[5]+arr[6]+arr[7];
+}
+
 float Engine::squared_eucledian_distance(const float*a,const float*b) const{
     float res=0;
-    for(int i=0;i<dim;i++){
+    int i=0;
+    __m256 sum=_mm256_setzero_ps();
+    for(;i<=dim-8;i+=8){
+        __m256 va=_mm256_loadu_ps(a+i);
+        __m256 vb=_mm256_loadu_ps(b+i);
+        __m256 diff=_mm256_sub_ps(va,vb);
+        sum=_mm256_fmadd_ps(diff,diff,sum);
+    }
+    res=sum256(sum);
+    for(;i<dim;i++){
         res+=(a[i]-b[i])*(a[i]-b[i]);
     }
     return res;
@@ -42,7 +57,15 @@ float Engine::squared_eucledian_distance(const float*a,const float*b) const{
 
 float Engine::dot_product(const float*a,const float*b) const{
     float ans=0;
-    for(int i=0;i<dim;i++){
+    int i=0;
+    __m256 sum=_mm256_setzero_ps();
+    for(;i<=dim-8;i+=8){
+        __m256 va=_mm256_loadu_ps(a+i);
+        __m256 vb=_mm256_loadu_ps(b+i);
+        sum=_mm256_fmadd_ps(va,vb,sum);
+    }
+    ans=sum256(sum);
+    for(;i<dim;i++){
         ans+=a[i]*b[i];
     }
     return ans;
@@ -50,8 +73,21 @@ float Engine::dot_product(const float*a,const float*b) const{
 
 float Engine::cosine_similarity(const float*a,const float*b) const{
     float dot=0,normA=0,normB=0;
-    
-    for(int i=0;i<dim;i++){
+    int i=0;
+    __m256 s_dot=_mm256_setzero_ps();
+    __m256 s_normA=_mm256_setzero_ps();
+    __m256 s_normB=_mm256_setzero_ps();
+    for(;i<=dim-8;i+=8){
+        __m256 va=_mm256_loadu_ps(a+i);
+        __m256 vb=_mm256_loadu_ps(b+i);
+        s_dot=_mm256_fmadd_ps(va,vb,s_dot);
+        s_normA=_mm256_fmadd_ps(va,va,s_normA);
+        s_normB=_mm256_fmadd_ps(vb,vb,s_normB);
+    }
+    dot=sum256(s_dot);
+    normA=sum256(s_normA);
+    normB=sum256(s_normB);
+    for(;i<dim;i++){
         dot+=a[i]*b[i];
         normA+=a[i]*a[i];
         normB+=b[i]*b[i];
@@ -59,7 +95,7 @@ float Engine::cosine_similarity(const float*a,const float*b) const{
     if(normA==0||normB==0){
         return 0;
     }
-    return dot/(sqrt(normA)*sqrt(normB));
+    return dot/(sqrt(normA*normB));
 }
 
 float Engine::compute_distance(const float*a,const float*b) const{
@@ -261,7 +297,7 @@ void Engine::insert(const string&uuid,const vector<float>&emb,const string&data)
         search_layer(emb.data(),curr_ep,ef_construction,level,top_k_queue);
         
         int max_conn;
-        if(level=0){
+        if(level==0){
             max_conn=M_max_0;
         }
         else{
@@ -320,15 +356,15 @@ vector<SearchResult> Engine::search(const vector<float>&query,int k){
     
     for(auto p:top_k_queue){
         if(active[p.second]){
-            float real_dist=(metric==MetricType::L2)?p.first:-p.first;
+            float real_dist;
             if(metric==MetricType::L2){
-                real_dis=p.first;
+                real_dist=p.first;
             }
-            else if(metric==MetricType::DOT_PRODUCT){
-                real_dis=-p.first;
+            else if(metric==MetricType::DOT){
+                real_dist=-p.first;
             }
             else if(metric==MetricType::COSINE){
-                real_dis=(1.0f-p.first);
+                real_dist=(1.0f-p.first);
             }
 
             res.push_back({id_to_uuid[p.second],real_dist,metadata[p.second]});
