@@ -16,6 +16,12 @@ struct SearchResult{
     string metadata;
 };
 
+struct HNSWNode{
+    int id;
+    int max_layer;
+    vector<vector<int>> neighbors;
+};
+
 template<class T>
 struct AlignedAllocator{
     using value_type=T;
@@ -46,9 +52,18 @@ class Engine{
     vector<string> id_to_uuid;
     vector<float,AlignedAllocator<float>> flat_vectors;
     vector<string> metadata;
+    vector<bool> active;
+    vector<HNSWNode> nodes;
     MetricType metric;
     int dim;
     mutable shared_mutex rw_lock;
+    int M=16;
+    int M_max_0=32;
+    int ef_construction=100;
+    int ef_search=50;
+    double mult;
+    int ep_id=-1;
+    int max_layer=-1;
 
     public:
     Engine(MetricType m=MetricType::L2);
@@ -62,8 +77,10 @@ class Engine{
 
     private:
     float sum256(__m256 x) const;
-    float compute_distance(const float*a,const vector<float>&b) const;
-    float squared_eucledian_distance(const float*a,const vector<float>&b) const;
-    float dot_product(const float*a,const vector<float>&b) const;
-    float cosine_similarity(const float*a,const vector<float>&b) const;
+    float compute_distance(const float*a,const float*b) const;
+    float squared_eucledian_distance(const float*a,const float*b) const;
+    float dot_product(const float*a,const float*b) const;
+    float cosine_similarity(const float*a,const float*b) const;
+    priority_queue<pair<float,int>> search_layer(const float*query,int entry_point_id,int ef,int layer);
+    void prune_connections(int node_id,int layer,int max_conn);
 };
