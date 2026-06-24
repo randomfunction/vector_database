@@ -18,5 +18,5 @@ add_library(core_db src/database.cpp src/Save_file.cpp)
 # ---------------------------------------------------------
 # Executable: SIFT Benchmark
 # ---------------------------------------------------------
-add_executable(sift_benchmark benchmarks/run_sift_benchmark.cpp)
+add_executable(sift_benchmark benchmarks/sift_benchmark.cpp)
 target_link_libraries(sift_benchmark PRIVATE core_db)

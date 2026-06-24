@@ -49,23 +49,32 @@ vector_database/
 ├── CMakeLists.txt
 ├── README.md
 ├── include/
-│   └── database.hpp         # Class definitions and inline SIMD functions
+│   └── database.hpp         # Class definitions and configurations
 ├── src/
 │   ├── database.cpp         # HNSW implementations and core logic
 │   └── Save_file.cpp        # Disk serialization routines
 ├── benchmarks/
-│   └── run_sift_benchmark.cpp
+│   └── sift_benchmark.cpp   # SIFT1M benchmark evaluation implementation
 └── scripts/
-    ├── download_sift.sh     # Script to pull and extract the dataset
-    └── run_benchmarks.sh    # Script to build and execute the binary
+    └── run_sift_benchmark.sh # Automates dataset download, build, and benchmark execution
+```
+
+## Quick Start (Automated Shell)
+
+The easiest way to evaluate the system is using the automated benchmarking script. It will automatically download the ~150MB SIFT1M `.tar.gz` dataset from the INRIA FTP server (if not present), compile using exact AVX2 flags, and execute the benchmark natively.
+
+```bash
+chmod +x scripts/run_sift_benchmark.sh
+./scripts/run_sift_benchmark.sh
 ```
 
 ## Quick Start (CMake)
 
+Alternatively, you can manually build the executable via CMake:
+
 ```bash
-# 1. Download the SIFT1M dataset
-chmod +x scripts/download_sift.sh
-./scripts/download_sift.sh
+# 1. First ensure the SIFT dataset is downloaded
+# (e.g. via wget ftp://ftp.irisa.fr/local/texmex/corpus/sift.tar.gz and extracting to the root sift/ directory)
 
 # 2. Build the project via CMake
 mkdir build && cd build
@@ -74,10 +83,4 @@ make -j$(nproc)
 
 # 3. Execute the benchmark
 ./sift_benchmark
-```
-
-Alternatively, use the automated build script:
-```bash
-chmod +x scripts/run_benchmarks.sh
-./scripts/run_benchmarks.sh
 ```
