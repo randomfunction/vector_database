@@ -1,4 +1,4 @@
-# High-Performance C++ Vector Database (HNSW-ANN)
+# C++ Vector Database (HNSW-ANN)
 
 An exact-search vector database optimized for low-latency memory access, subsequently upgraded with a multi-layer Hierarchical Navigable Small World (HNSW) Approximate Nearest Neighbor (ANN) index. Engineered with pre-allocated memory arenas and explicit AVX2 intrinsics, the system bypasses heap fragmentation and guarantees $O(1)$ allocation behavior on the hot path.
 
@@ -78,9 +78,3 @@ Alternatively, use the automated build script:
 chmod +x scripts/run_benchmarks.sh
 ./scripts/run_benchmarks.sh
 ```
-
-## Tradeoffs & Limitations
-
-* **Global Read/Write Lock**: The system currently synchronizes concurrency using a global `std::shared_mutex`. While this enables safe multi-threaded parallel reads, write-heavy workloads will cause lock contention. Future iterations will adopt fine-grained node-level locking or an RCU (Read-Copy-Update) concurrency protocol.
-* **32-Byte Memory Alignment Constraint**: Operations assume vectors are strictly padded and aligned to 32-byte boundaries to feed AVX2 vector registers natively.
-* **Soft Deletions**: Vector removal is implemented via active tombstones to prevent shattering the graph node ID mapping. Sustained deletion workloads require periodic offline database compactions.
