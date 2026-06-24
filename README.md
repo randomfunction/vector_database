@@ -12,6 +12,9 @@ Distance metrics (L2, Dot Product, Cosine) execute raw hardware-level vectorizat
 
 ### HNSW Graph Topology
 The approximate nearest neighbor component is a multi-layer Navigable Small World graph, designed for extreme low-latency logarithmic search paths.
+
+![HNSW Layers](hnsw-layers.png)
+
 * **$M$**: `32` (Denser intermediate layer connections)
 * **$M_{max0}$**: `64` (Denser base layer capacity)
 * **$ef_{construction}$**: `400` (High-quality graph build)
