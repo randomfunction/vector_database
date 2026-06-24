@@ -5,6 +5,7 @@
 #include<numeric>
 #include<algorithm>
 #include<iomanip>
+#include<unordered_set>
 
 using namespace std;
 
@@ -26,9 +27,26 @@ vector<vector<float>> read_fvecs(const string&filename,int&dim,int max_vecs=-1){
     return vecs;
 }
 
+vector<vector<int>> read_ivecs(const string&filename){
+    ifstream file(filename,ios::binary);
+    if(!file){
+        cerr<<"Could not open "<<filename<<endl;
+        exit(1);
+    }
+    vector<vector<int>> vecs;
+    int d;
+    while(file.read((char*)&d,4)){
+        vector<int> vec(d);
+        file.read((char*)vec.data(),d*sizeof(int));
+        vecs.push_back(vec);
+    }
+    return vecs;
+}
+
 int main(){
     string base_file="sift/sift_base.fvecs";
     string query_file="sift/sift_query.fvecs";
+    string gt_file="sift/sift_groundtruth.ivecs";
     
     int dim=0;
     cout<<"LOADING SIFT1M BASE VECTORS..."<<endl;
@@ -40,13 +58,17 @@ int main(){
     vector<vector<float>> query_vecs=read_fvecs(query_file,q_dim);
     cout<<"Loaded "<<query_vecs.size()<<" queries."<<endl;
     
+    cout<<"LOADING GROUND TRUTH..."<<endl;
+    vector<vector<int>> ground_truth=read_ivecs(gt_file);
+    cout<<"Loaded "<<ground_truth.size()<<" ground truth sets."<<endl;
+    
     Engine db(MetricType::L2);
     db.reserve(base_vecs.size()+1000);
     
     cout<<"STARTING INSERTION..."<<endl;
     auto start_insert=chrono::high_resolution_clock::now();
     for(size_t i=0;i<base_vecs.size();i++){
-        db.insert("uuid_"+to_string(i),base_vecs[i],"meta");
+        db.insert(to_string(i),base_vecs[i],"meta");
         if((i+1)%100000==0){
             cout<<"Inserted "<<(i+1)<<" / "<<base_vecs.size()<<endl;
         }
@@ -58,17 +80,44 @@ int main(){
     vector<double> latencies;
     latencies.reserve(query_vecs.size());
     
+    int k_test=100;
+    double total_recall_10=0;
+    double total_recall_100=0;
+    
     auto start_search=chrono::high_resolution_clock::now();
     for(size_t i=0;i<query_vecs.size();i++){
         auto t1=chrono::high_resolution_clock::now();
-        db.search(query_vecs[i],10);
+        auto res=db.search(query_vecs[i],k_test);
         auto t2=chrono::high_resolution_clock::now();
         latencies.push_back(chrono::duration<double,micro>(t2-t1).count());
+        
+        unordered_set<int> retrieved_10;
+        unordered_set<int> retrieved_100;
+        for(size_t j=0;j<res.size();j++){
+            int id=stoi(res[j].uuid);
+            if(j<10)retrieved_10.insert(id);
+            retrieved_100.insert(id);
+        }
+        
+        int match_10=0;
+        int match_100=0;
+        for(int j=0;j<10;j++){
+            if(retrieved_10.count(ground_truth[i][j]))match_10++;
+        }
+        for(int j=0;j<100;j++){
+            if(retrieved_100.count(ground_truth[i][j]))match_100++;
+        }
+        
+        total_recall_10+=(double)match_10/10.0;
+        total_recall_100+=(double)match_100/100.0;
     }
     auto end_search=chrono::high_resolution_clock::now();
     double search_time=chrono::duration<double,milli>(end_search-start_search).count();
     
     sort(latencies.begin(),latencies.end());
+    
+    double avg_recall_10=(total_recall_10/query_vecs.size())*100.0;
+    double avg_recall_100=(total_recall_100/query_vecs.size())*100.0;
     
     cout<<"\n==========================================="<<endl;
     cout<<"          SIFT1M BENCHMARK RESULTS         "<<endl;
@@ -79,6 +128,10 @@ int main(){
     cout<<"SEARCH THROUGHPUT: "<<query_vecs.size()/(search_time/1000.0)<<" queries/sec"<<endl;
     cout<<"-------------------------------------------"<<endl;
     cout<<fixed<<setprecision(2);
+    cout<<"RECALL METRICS:"<<endl;
+    cout<<"  Recall@10:  "<<avg_recall_10<<" %"<<endl;
+    cout<<"  Recall@100: "<<avg_recall_100<<" %"<<endl;
+    cout<<"-------------------------------------------"<<endl;
     cout<<"LATENCY PERCENTILES (Microseconds):"<<endl;
     cout<<"  Min:     "<<latencies.front()<<" us"<<endl;
     cout<<"  Avg:     "<<accumulate(latencies.begin(),latencies.end(),0.0)/latencies.size()<<" us"<<endl;

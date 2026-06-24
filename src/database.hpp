@@ -58,14 +58,22 @@ class Engine{
     MetricType metric;
     int dim;
     mutable shared_mutex rw_lock;
-    int M=16;
-    int M_max_0=32;
-    int ef_construction=100;
-    int ef_search=50;
+
+    int max_layer=-1;
     double mult;
     int ep_id=-1;
-    int max_layer=-1;
-    size_t max_capacity=100000;
+
+    // int M=16;
+    // int M_max_0=32;
+    // int ef_construction=100;
+    // int ef_search=50;
+    // size_t max_capacity=100000;
+
+    int M = 32;               // Denser connections
+    int M_max_0 = 64;         // Denser base layer
+    int ef_construction = 400; // High-quality graph build
+    int ef_search = 200;      // Wide search beam
+    size_t max_capacity = 1000000;
 
     public:
     Engine(MetricType m=MetricType::L2);
