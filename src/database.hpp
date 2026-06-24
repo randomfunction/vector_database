@@ -65,9 +65,11 @@ class Engine{
     double mult;
     int ep_id=-1;
     int max_layer=-1;
+    size_t max_capacity=100000;
 
     public:
     Engine(MetricType m=MetricType::L2);
+    void reserve(size_t max_elements);
     void insert(const string&uuid,const vector<float>&emb,const string&data);
     void update(const string&uuid,const vector<float>&emb,const string&data);
     void remove(const string&uuid);

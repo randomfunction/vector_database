@@ -14,6 +14,21 @@ void Engine::set_metric(MetricType m){
     metric=m;
 }
 
+void Engine::reserve(size_t max_elements){
+    unique_lock<shared_mutex> lock(rw_lock);
+    max_capacity=max_elements;
+    metadata.reserve(max_elements);
+    active.reserve(max_elements);
+    nodes.reserve(max_elements);
+    id_to_uuid.reserve(max_elements);
+    uuid_to_id.reserve(max_elements);
+    size_t avg_edges=(M_max_0+2)+2*(M+2);
+    flat_edges.reserve(max_elements*avg_edges);
+    if(dim>0){
+        flat_vectors.reserve(max_elements*dim);
+    }
+}
+
 float Engine::sum256(__m256 x) const{
     float arr[8];
     _mm256_storeu_ps(arr,x);
@@ -170,7 +185,8 @@ void Engine::prune_connections(int node_id,int layer,int max_conn){
     if(count<=max_conn){
         return;
     }
-    vector<pair<float,int>> pq;
+    thread_local vector<pair<float,int>> pq;
+    pq.clear();
     for(int i=1;i<=count;i++){
         int neighbor_id=edges[i];
         float dist=compute_distance(&flat_vectors[node_id*dim],&flat_vectors[neighbor_id*dim]);
@@ -203,6 +219,16 @@ void Engine::insert(const string&uuid,const vector<float>&emb,const string&data)
     }
     if(dim==0){
         dim=emb.size();
+        flat_vectors.reserve(max_capacity*dim);
+        if(nodes.capacity()<max_capacity){
+            metadata.reserve(max_capacity);
+            active.reserve(max_capacity);
+            nodes.reserve(max_capacity);
+            id_to_uuid.reserve(max_capacity);
+            uuid_to_id.reserve(max_capacity);
+            size_t avg_edges=(M_max_0+2)+2*(M+2);
+            flat_edges.reserve(max_capacity*avg_edges);
+        }
     }
     else if(emb.size()!=dim){
         return;
@@ -247,7 +273,8 @@ void Engine::insert(const string&uuid,const vector<float>&emb,const string&data)
     for(int level=min(l,curr_max_layer);level>=0;level--){
         search_layer(emb.data(),curr_ep,ef_construction,level,top_k_queue);
         int max_conn=(level==0)?M_max_0:M;
-        vector<int> selected_neighbors;
+        thread_local vector<int> selected_neighbors;
+        selected_neighbors.clear();
         sort(top_k_queue.begin(),top_k_queue.end());
         for(int i=0;i<top_k_queue.size()&&selected_neighbors.size()<max_conn;i++){
             selected_neighbors.push_back(top_k_queue[i].second);
