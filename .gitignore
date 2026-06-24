@@ -1,0 +1,4 @@
+#all binary files
+/bench_final
+/bench_sift
+/bench_simd
