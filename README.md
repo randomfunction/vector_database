@@ -20,16 +20,6 @@ The approximate nearest neighbor component is a multi-layer Navigable Small Worl
 * **$ef_{construction}$**: `400` (High-quality graph build)
 * **$ef_{search}$**: `200` (Wide search beam during inference)
 
-```mermaid
-graph TD;
-    A[Query Vector] --> B(HNSW Layer 3);
-    B --> C(HNSW Layer 2);
-    C --> D(HNSW Layer 1);
-    D --> E(Base Layer 0);
-    E --> F[Exact Distance Calc via AVX2 SIMD];
-    F --> G[Top-K Candidates];
-```
-
 ## Benchmarks
 
 The system was benchmarked against the standard **SIFT1M** dataset (1,000,000 base vectors, 128 dimensions).
