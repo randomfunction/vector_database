@@ -2,3 +2,8 @@
 /bench_final
 /bench_sift
 /bench_simd
+snapshot.bin
+.venv/
+__pycache__/
+sift/
+/sift.tat.gz

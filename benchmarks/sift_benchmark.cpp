@@ -84,13 +84,20 @@ int main(){
     double total_recall_10=0;
     double total_recall_100=0;
     
+    vector<decltype(db.search(vector<float>(),0))> all_results(query_vecs.size());
+    
     auto start_search=chrono::high_resolution_clock::now();
     for(size_t i=0;i<query_vecs.size();i++){
         auto t1=chrono::high_resolution_clock::now();
-        auto res=db.search(query_vecs[i],k_test);
+        all_results[i]=db.search(query_vecs[i],k_test);
         auto t2=chrono::high_resolution_clock::now();
         latencies.push_back(chrono::duration<double,micro>(t2-t1).count());
-        
+    }
+    auto end_search=chrono::high_resolution_clock::now();
+    double search_time=chrono::duration<double,milli>(end_search-start_search).count();
+    
+    for(size_t i=0;i<query_vecs.size();i++){
+        auto&res=all_results[i];
         unordered_set<int> retrieved_10;
         unordered_set<int> retrieved_100;
         for(size_t j=0;j<res.size();j++){
@@ -111,8 +118,6 @@ int main(){
         total_recall_10+=(double)match_10/10.0;
         total_recall_100+=(double)match_100/100.0;
     }
-    auto end_search=chrono::high_resolution_clock::now();
-    double search_time=chrono::duration<double,milli>(end_search-start_search).count();
     
     sort(latencies.begin(),latencies.end());
     
