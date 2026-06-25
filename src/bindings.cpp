@@ -13,7 +13,7 @@ PYBIND11_MODULE(custom_vectordb,m){
         
     py::class_<SearchResult>(m,"SearchResult")
         .def_readwrite("uuid",&SearchResult::uuid)
-        .def_readwrite("distance",&SearchResult::distance)
+        .def_readwrite("distance",&SearchResult::dist)
         .def_readwrite("metadata",&SearchResult::metadata);
         
     py::class_<Engine>(m,"Engine")

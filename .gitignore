@@ -6,4 +6,6 @@ snapshot.bin
 .venv/
 __pycache__/
 sift/
-/sift.tat.gz
+/sift.tar.gz
+/cc.en.300.bin
+/build
