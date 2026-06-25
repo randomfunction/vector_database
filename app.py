@@ -40,10 +40,30 @@ async def lifespan(app:FastAPI):
     print("Database ready!")
     yield
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app=FastAPI(lifespan=lifespan)
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 @app.get("/search")
-def search(word:str,k:int=10):
+def search(word:str,k:int=11):
     vec=ft_model.get_word_vector(word).tolist()
     results=db.search(vec,k)
-    return [{"word":res.metadata,"distance":res.distance} for res in results]
+    results.pop(0)
+    return {
+        "query_vector": vec,
+        "results": [
+            {
+                "word": res.metadata,
+                "distance": res.distance,
+                "vector": ft_model.get_word_vector(res.metadata).tolist()
+            } for res in results
+        ]
+    }

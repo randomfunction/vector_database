@@ -9,3 +9,11 @@ sift/
 /sift.tar.gz
 /cc.en.300.bin
 /build
+
+.env
+node_modules/
+dist/
+dist-ssr/
+
+__pycache__/
+*.pyc
