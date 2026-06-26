@@ -1,12 +1,3 @@
----
-title: VectorSearch
-emoji: 🚀
-colorFrom: blue
-colorTo: indigo
-sdk: docker
-pinned: false
----
-
 # High-Performance HNSW Vector Database & Semantic Search Engine
 
 An exact-search and Approximate Nearest Neighbor (ANN) vector database engineered entirely in C++ from the ground up, seamlessly bridged into a production-ready Python/FastAPI backend and a React interactive frontend. The core engine is optimized for low-latency memory access using pre-allocated memory arenas and explicit AVX2 SIMD intrinsics, guaranteeing $O(1)$ allocation behavior on the hot path.
@@ -32,7 +23,7 @@ The approximate nearest neighbor component is a multi-layer Navigable Small Worl
 
 ## Full-Stack Semantic Search Architecture
 
-![Home Page](public/vd2.png)
+![Home Page](public/vd_1.png)
 
 Building upon the C++ engine, the project implements a complete, distributed full-stack application:
 
