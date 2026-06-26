@@ -45,8 +45,8 @@ body {
 .bg-image {
   position: fixed;
   inset: 0;
-  background: url('/bg.jpg') center / cover no-repeat;
-  opacity: 0.2;
+  background: url('./bg.jpg') center / cover no-repeat;
+  opacity: 0.4;
   z-index: 0;
 }
 
@@ -231,7 +231,7 @@ body {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  margin-right: 1rem;
+  margin-right: 2rem;
 }
 
 .k-label {
@@ -265,6 +265,7 @@ body {
   -webkit-appearance: none;
   margin: 0;
 }
+
 .search-k-input[type=number] {
   -moz-appearance: textfield;
 }

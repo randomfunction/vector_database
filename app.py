@@ -58,9 +58,10 @@ def sim(v1,v2):
     return Levenshtein.ratio(v1,v2)
 
 @app.get("/search")
-def search(word:str,k:int):
+def search(word:str,k:int, metric:str="cosine"):
     search_k= k+10
     vec=ft_model.get_word_vector(word).tolist()
+
     results=db.search(vec,search_k)
 
     count=0;
