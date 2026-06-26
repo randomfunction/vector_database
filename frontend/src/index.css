@@ -40,6 +40,8 @@ body {
 .app {
   position: relative;
   min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 .bg-image {
@@ -109,9 +111,112 @@ body {
 .content {
   position: relative;
   z-index: 2;
-  max-width: 960px;
+  max-width: 1040px;
   margin: 0 auto;
-  padding: 3.5rem 1.5rem 6rem;
+  padding: 6.5rem 6rem 6rem;
+}
+
+/* ──────────────── NAVBAR ──────────────── */
+.navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 70px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 2rem;
+  background: rgba(10, 10, 18, 0.6);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  z-index: 100;
+}
+
+.nav-brand {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--accent-bright);
+  letter-spacing: -0.02em;
+}
+
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.nav-link {
+  color: var(--text);
+  text-decoration: none;
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
+.nav-link:hover {
+  color: var(--cyan);
+}
+
+.nav-icon {
+  color: var(--text-dim);
+  transition: color 0.2s, transform 0.2s;
+  display: flex;
+  align-items: center;
+}
+
+.nav-icon:hover {
+  color: #fff;
+  transform: translateY(-2px);
+}
+
+/* ──────────────── FOOTER ──────────────── */
+.footer {
+  position: relative;
+  z-index: 2;
+  margin-top: auto;
+  padding: 3rem 2rem;
+  text-align: center;
+  border-top: 1px solid var(--border);
+  background: rgba(10, 10, 18, 0.4);
+  backdrop-filter: blur(10px);
+}
+
+.footer p {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+  line-height: 1.5;
+}
+
+.footer-links {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+}
+
+.footer-links a {
+  color: var(--accent-dim);
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 600;
+  font-family: 'JetBrains Mono', monospace;
+  transition: color 0.2s;
+}
+
+.footer-links a:hover {
+  color: var(--accent-bright);
+}
+
+.mobile-break {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .mobile-break {
+    display: block;
+  }
 }
 
 /* ──────────────── HERO ──────────────── */
@@ -563,5 +668,431 @@ body {
 
   .result-dist {
     align-items: flex-start;
+  }
+}
+
+/* ════════════════════════════════════════════════════════
+   ARCHITECTURE PAGE
+   ════════════════════════════════════════════════════════ */
+
+.nav-link--active {
+  color: var(--cyan) !important;
+}
+
+.nav-brand {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--accent-bright);
+  letter-spacing: -0.02em;
+  text-decoration: none;
+}
+
+.arch-page {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  padding: 6.5rem 2rem 4rem;
+}
+
+.arch-hero {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.arch-hero-title {
+  font-size: 3.5rem;
+  font-weight: 900;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  color: #f1f5f9;
+  margin-bottom: 0.75rem;
+}
+
+.arch-hero-sub {
+  font-size: 1.05rem;
+  color: var(--text-muted);
+  max-width: 640px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+/* ── Legend ── */
+.arch-legend {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  margin-bottom: 3rem;
+}
+
+.arch-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.arch-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ── Body layout ── */
+.arch-body {
+  display: flex;
+  gap: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.arch-stack {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* ── Layer ── */
+.arch-layer {
+  padding: 0.75rem 0;
+}
+
+.arch-layer-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.arch-layer-indicator {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.arch-layer-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.arch-layer-line {
+  flex: 1;
+  height: 1px;
+}
+
+.arch-layer-nodes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding-left: 1.75rem;
+}
+
+/* ── Node ── */
+.arch-node {
+  position: relative;
+  cursor: pointer;
+  border-radius: 12px;
+  overflow: hidden;
+  transition: box-shadow 0.3s;
+}
+
+.arch-node-glow {
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--node-color) 20%, transparent);
+  background: color-mix(in srgb, var(--node-color) 5%, var(--bg));
+  transition: border-color 0.3s, background 0.3s, box-shadow 0.3s;
+}
+
+.arch-node:hover .arch-node-glow {
+  border-color: color-mix(in srgb, var(--node-color) 50%, transparent);
+  background: color-mix(in srgb, var(--node-color) 10%, var(--bg));
+  box-shadow: 0 0 24px color-mix(in srgb, var(--node-color) 15%, transparent);
+}
+
+.arch-node--active .arch-node-glow {
+  border-color: var(--node-color) !important;
+  background: color-mix(in srgb, var(--node-color) 12%, var(--bg)) !important;
+  box-shadow: 0 0 32px color-mix(in srgb, var(--node-color) 25%, transparent) !important;
+}
+
+.arch-node-inner {
+  position: relative;
+  padding: 0.65rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.arch-node-label {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.arch-node-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--bg);
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+}
+
+/* ── Connector between layers ── */
+.arch-connector {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 28px;
+  position: relative;
+  padding-left: 1.75rem;
+}
+
+.arch-connector-line {
+  width: 1px;
+  height: 100%;
+  background: linear-gradient(180deg, var(--border-hover), var(--border));
+}
+
+.arch-connector-pulse {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: connector-pulse 2.5s ease-in-out infinite;
+}
+
+@keyframes connector-pulse {
+  0%, 100% { transform: translateY(-10px); opacity: 0; }
+  30% { opacity: 1; }
+  70% { opacity: 1; }
+  100% { transform: translateY(10px); opacity: 0; }
+}
+
+/* ── Inspector Panel ── */
+.arch-inspector {
+  width: 360px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 90px;
+  align-self: flex-start;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  backdrop-filter: blur(20px);
+}
+
+.inspector-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.inspector-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.inspector-layer {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  flex: 1;
+}
+
+.inspector-close {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 0.25rem;
+  line-height: 1;
+  transition: color 0.2s;
+}
+
+.inspector-close:hover {
+  color: var(--text);
+}
+
+.inspector-title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #f8fafc;
+  margin-bottom: 0.5rem;
+}
+
+.inspector-badge {
+  display: inline-block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border: 1px solid;
+  padding: 0.2rem 0.6rem;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+
+.inspector-desc {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  line-height: 1.65;
+  margin-bottom: 1.25rem;
+}
+
+.inspector-files {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.inspector-files-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+  margin-bottom: 0.15rem;
+}
+
+.inspector-file {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.78rem;
+  color: var(--accent);
+  background: rgba(167, 139, 250, 0.08);
+  padding: 0.3rem 0.6rem;
+  border-radius: 6px;
+  border: 1px solid rgba(167, 139, 250, 0.12);
+}
+
+/* ── Data Flow ── */
+.dataflow {
+  max-width: 1200px;
+  margin: 3rem auto 0;
+}
+
+.dataflow-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #f1f5f9;
+  margin-bottom: 1.25rem;
+}
+
+.dataflow-track {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.dataflow-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.6rem 0.85rem;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  transition: background 0.3s, border-color 0.3s;
+}
+
+.dataflow-step--active {
+  background: rgba(167, 139, 250, 0.06);
+  border-color: var(--border);
+}
+
+.dataflow-step-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-dim);
+  background: rgba(255, 255, 255, 0.04);
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.dataflow-step--active .dataflow-step-num {
+  background: var(--accent-dim);
+  color: white;
+}
+
+.dataflow-step-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.dataflow-step-endpoints {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.25rem;
+}
+
+.dataflow-chip {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text);
+  border: 1px solid;
+  padding: 0.15rem 0.55rem;
+  border-radius: 6px;
+  text-transform: capitalize;
+}
+
+.dataflow-arrow {
+  width: 24px;
+  height: 12px;
+  color: var(--text-dim);
+  flex-shrink: 0;
+}
+
+.dataflow-step-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  word-break: break-all;
+}
+
+.dataflow-step--active .dataflow-step-label {
+  color: var(--accent);
+}
+
+/* ── Architecture Responsive ── */
+@media (max-width: 900px) {
+  .arch-body {
+    flex-direction: column;
+  }
+  .arch-inspector {
+    width: 100%;
+    position: static;
+  }
+  .arch-hero-title {
+    font-size: 2.5rem;
   }
 }
