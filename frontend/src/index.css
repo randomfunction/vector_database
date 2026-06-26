@@ -227,6 +227,48 @@ body {
   color: var(--text-dim);
 }
 
+.k-selector {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-right: 1rem;
+}
+
+.k-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  font-weight: 500;
+}
+
+.search-k-input {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--accent-bright);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.95rem;
+  padding: 0.35rem 0.5rem;
+  width: 50px;
+  text-align: center;
+  outline: none;
+  transition: border-color 0.3s;
+}
+
+.search-k-input:focus {
+  border-color: var(--accent);
+}
+
+/* Hide arrows for number input */
+.search-k-input::-webkit-outer-spin-button,
+.search-k-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.search-k-input[type=number] {
+  -moz-appearance: textfield;
+}
+
 .search-btn {
   flex-shrink: 0;
   background: linear-gradient(135deg, var(--accent-dim), var(--accent));

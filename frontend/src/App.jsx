@@ -5,6 +5,8 @@ import './index.css'
 
 function App() {
   const [query, setQuery] = useState('')
+  const [kInput, setKInput] = useState("15")
+  const [k, setK] = useState(15)
   const [loading, setLoading] = useState(false)
   const [data, setData] = useState(null)
   const [searchTime, setSearchTime] = useState(null)
@@ -21,7 +23,8 @@ function App() {
     setData(null)
     const t0 = performance.now()
     try {
-      const res = await fetch(`http://localhost:8000/search?word=${encodeURIComponent(query.trim())}&k=15`)
+      // console.log(k)
+      const res = await fetch(`http://localhost:8000/search?word=${encodeURIComponent(query.trim())}&k=${k}`)
       const json = await res.json()
       setSearchTime((performance.now() - t0).toFixed(1))
       setData(json)
@@ -98,6 +101,24 @@ function App() {
               placeholder="king, quantum, Einsteinn..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
+            />
+
+            <input
+              id="k-input"
+              type="number"
+              className="search-k-input"
+              value={kInput}
+              onChange={(e) => setKInput(e.target.value)}
+              onBlur={() => {
+                const val = Number(kInput);
+                console.log(val);
+
+                if (val >= 3 && val <= 50 && Number.isInteger(val)) {
+                  setK(val);
+                } else {
+                  setKInput(String(k));
+                }
+              }}
             />
             <button className="search-btn" type="submit" disabled={loading}>
               {loading ? (

@@ -58,17 +58,27 @@ def sim(v1,v2):
     return Levenshtein.ratio(v1,v2)
 
 @app.get("/search")
-def search(word:str,k:int=15):
+def search(word:str,k:int):
+    search_k= k+10
     vec=ft_model.get_word_vector(word).tolist()
-    results=db.search(vec,k)
-    print(len(results))
+    results=db.search(vec,search_k)
+
+    count=0;
 
     final_results=[]
     for i in results:
 
-        if(sim(i.metadata,word)<0.85):
+        if(sim(i.metadata,word)<0.7):
             final_results.append(i)
+            count+=1
+
+        if(count==k):
+            break
+
     results=final_results
+
+    for i in final_results:
+        print(i.metadata,sim(i.metadata,word))
 
     return {
         "query_vector": vec,
@@ -77,6 +87,7 @@ def search(word:str,k:int=15):
                 "word": res.metadata,
                 "distance": res.distance,
                 "vector": ft_model.get_word_vector(res.metadata).tolist()
+    
             } for res in results
         ]
     }
