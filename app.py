@@ -56,7 +56,10 @@ app.add_middleware(
 def search(word:str,k:int=11):
     vec=ft_model.get_word_vector(word).tolist()
     results=db.search(vec,k)
+    print(len(results))
+    # print(type(results))
     results.pop(0)
+    # print(len(results))
     return {
         "query_vector": vec,
         "results": [
