@@ -51,6 +51,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    max_age=86400,
 )
 
 
@@ -82,12 +83,12 @@ def search(word:str,k:int, metric:str="cosine"):
         print(i.metadata,sim(i.metadata,word))
 
     return {
-        "query_vector": vec,
+        "query_vector": [round(v, 3) for v in vec],
         "results": [
             {
                 "word": res.metadata,
-                "distance": res.distance,
-                "vector": ft_model.get_word_vector(res.metadata).tolist()
+                "distance": round(float(res.distance), 4),
+                "vector": [round(v, 3) for v in ft_model.get_word_vector(res.metadata).tolist()]
     
             } for res in results
         ]
