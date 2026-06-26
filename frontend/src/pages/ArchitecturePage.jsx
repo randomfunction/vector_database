@@ -16,10 +16,10 @@ const LAYERS = [
     nodes: [
       {
         id: 'react-ui',
-        label: 'React 18 + Vite',
-        description: 'Single-page application built with React 18 and Vite dev server. Handles user input, state management, and renders search results with animated transitions via Framer Motion.',
+        label: 'Vercel React SPA',
+        description: 'Deployed on Vercel Edge Network. Single-page application built with React 18 and Vite. Handles user input, state management, and renders search results with animated transitions via Framer Motion.',
         files: ['frontend/src/App.jsx', 'frontend/src/main.jsx', 'frontend/vite.config.js'],
-        badge: null,
+        badge: 'Vercel',
       },
       {
         id: 'vector-heatmap',
@@ -45,10 +45,10 @@ const LAYERS = [
     nodes: [
       {
         id: 'fastapi',
-        label: 'FastAPI Server',
-        description: 'ASGI server running on Uvicorn. Manages application lifecycle via an async context manager that initializes the FastText model and C++ engine at startup. Exposes a single REST endpoint.',
-        files: ['app.py'],
-        badge: null,
+        label: 'Hugging Face FastAPI',
+        description: 'Deployed in a Docker container on Hugging Face Spaces (16GB RAM). ASGI server running on Uvicorn. Manages application lifecycle via an async context manager that initializes the C++ engine.',
+        files: ['app.py', 'Dockerfile'],
+        badge: 'Docker',
       },
       {
         id: 'search-endpoint',
@@ -75,7 +75,7 @@ const LAYERS = [
       {
         id: 'fasttext',
         label: 'FastText cc.en.300',
-        description: 'Facebook\'s pre-trained FastText model (cc.en.300.bin, ~7GB). Generates 300-dimensional word vectors using character n-gram subwords, which natively solves the Out-of-Vocabulary (OOV) problem for misspelled or novel words.',
+        description: 'Facebook\'s pre-trained FastText model (7GB). Downloaded directly from Facebook CDN during Docker build. Generates 300-dimensional word vectors using character n-gram subwords, natively solving the Out-of-Vocabulary (OOV) problem.',
         files: ['cc.en.300.bin'],
         badge: 'OOV-Tolerant',
       },
