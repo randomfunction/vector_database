@@ -116,7 +116,7 @@ function App() {
               ref={inputRef}
               className="search-input"
               type="text"
-              placeholder="king, quantum, Einsteinn..."
+              placeholder="compiler, quantum, cat..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
