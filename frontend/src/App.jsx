@@ -24,8 +24,10 @@ function App() {
     setData(null)
     const t0 = performance.now()
     try {
-      // console.log(k)
-      const res = await fetch(`http://localhost:8000/search?word=${encodeURIComponent(query.trim())}&k=${k}`)
+      const API = import.meta.env.PROD
+        ? 'https://fugginghace26-vectordb.hf.space'
+        : 'http://localhost:8000'
+      const res = await fetch(`${API}/search?word=${encodeURIComponent(query.trim())}&k=${k}`)
       const json = await res.json()
       setSearchTime((performance.now() - t0).toFixed(1))
       setData(json)
