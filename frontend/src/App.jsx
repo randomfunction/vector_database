@@ -21,7 +21,7 @@ function App() {
     setData(null)
     const t0 = performance.now()
     try {
-      const res = await fetch(`http://localhost:8000/search?word=${encodeURIComponent(query.trim())}&k=11`)
+      const res = await fetch(`http://localhost:8000/search?word=${encodeURIComponent(query.trim())}&k=15`)
       const json = await res.json()
       setSearchTime((performance.now() - t0).toFixed(1))
       setData(json)
