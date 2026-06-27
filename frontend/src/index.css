@@ -1083,7 +1083,7 @@ body {
   color: var(--accent);
 }
 
-/* ── Architecture Responsive ── */
+/* ── Responsive & Mobile ── */
 @media (max-width: 900px) {
   .arch-body {
     flex-direction: column;
@@ -1094,5 +1094,76 @@ body {
   }
   .arch-hero-title {
     font-size: 2.5rem;
+  }
+  .content {
+    padding: 6rem 2rem 4rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .content {
+    padding: 5rem 1rem 3rem;
+  }
+  
+  .navbar {
+    padding: 0 1rem;
+  }
+  
+  .nav-brand {
+    font-size: 1.1rem;
+  }
+  
+  .nav-right {
+    gap: 1rem;
+  }
+  
+  .hero-title {
+    font-size: 2.2rem;
+  }
+
+  .hero-sub {
+    font-size: 0.95rem;
+    padding: 0 0.5rem;
+  }
+  
+  .search-wrapper {
+    flex-direction: column;
+    padding: 1rem;
+    gap: 1rem;
+  }
+  
+  .search-input {
+    width: 100%;
+    text-align: center;
+    padding: 0.5rem 0;
+  }
+  
+  .k-selector {
+    margin-right: 0;
+    justify-content: center;
+    width: 100%;
+  }
+  
+  .search-btn {
+    width: 100%;
+  }
+  
+  .stats-bar {
+    flex-direction: column;
+    border-radius: var(--radius);
+  }
+  
+  .stat {
+    border-radius: 0 !important;
+    border-bottom: 1px solid var(--border);
+    padding: 1.25rem 0.5rem;
+  }
+  
+  .stat:last-child {
+    border-bottom: none;
+  }
+  
+  .footer {
+    padding: 2rem 1rem;
   }
 }
