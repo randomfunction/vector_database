@@ -33,9 +33,12 @@ void Engine::reserve(size_t max_elements){
 }
 
 float Engine::sum256(__m256 x) const{
-    float arr[8];
-    _mm256_storeu_ps(arr,x);
-    return arr[0]+arr[1]+arr[2]+arr[3]+arr[4]+arr[5]+arr[6]+arr[7];
+    __m128 lo=_mm256_extractf128_ps(x,0); 
+    __m128 hi= _mm256_extractf128_ps(x,1);
+    __m128 sum=_mm_add_ps(lo, hi);
+    sum=_mm_hadd_ps(sum,sum);
+    sum=_mm_hadd_ps(sum,sum);
+    return _mm_cvtss_f32(sum);
 }
 
 float Engine::squared_eucledian_distance(const float*a,const float*b) const{
