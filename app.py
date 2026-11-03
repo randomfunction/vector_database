@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Query, HTTPException
 from contextlib import asynccontextmanager
 import fasttext
 import custom_vectordb
@@ -45,21 +45,40 @@ from fastapi.middleware.cors import CORSMiddleware
 
 app=FastAPI(lifespan=lifespan)
 
+# Pin allowed origins instead of "*". The API uses no cookies/auth, so
+# credentials are disabled (the "*" + credentials combination is invalid and
+# insecure). Override the list per environment via ALLOWED_ORIGINS
+# (comma-separated); defaults cover local Vite/React dev servers.
+_origins_env=os.environ.get("ALLOWED_ORIGINS","http://localhost:5173,http://localhost:3000")
+ALLOWED_ORIGINS=[o.strip() for o in _origins_env.split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=False,
+    allow_methods=["GET"],
     allow_headers=["*"],
     max_age=86400,
 )
+
+ALLOWED_METRICS={"cosine","l2","dot"}
 
 
 def sim(v1,v2):
     return Levenshtein.ratio(v1,v2)
 
 @app.get("/search")
-def search(word:str,k:int, metric:str="cosine"):
+def search(
+    word:str=Query(...,min_length=1,max_length=100),
+    k:int=Query(...,ge=1,le=100),
+    metric:str=Query("cosine"),
+):
+    word=word.strip()
+    if not word:
+        raise HTTPException(status_code=400,detail="word must not be empty")
+    if metric.lower() not in ALLOWED_METRICS:
+        raise HTTPException(status_code=400,detail=f"metric must be one of {sorted(ALLOWED_METRICS)}")
+
     search_k= k+10
     vec=ft_model.get_word_vector(word).tolist()
 

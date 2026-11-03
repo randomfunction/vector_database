@@ -20,7 +20,12 @@ PYBIND11_MODULE(custom_vectordb,m){
         .def(py::init<MetricType>(),py::arg("m")=MetricType::L2)
         .def("reserve",&Engine::reserve)
         .def("insert",&Engine::insert)
-        .def("search",&Engine::search)
+        // Release the GIL for the duration of the native search so concurrent
+        // Python-side requests actually run in parallel through the engine's
+        // shared (read) lock instead of serializing on the interpreter lock.
+        // Safe here: search takes only a shared_lock and touches no Python
+        // objects; pybind converts the args/return value with the GIL held.
+        .def("search",&Engine::search,py::call_guard<py::gil_scoped_release>())
         .def("save_to_file",&Engine::save_to_file)
         .def("load_from_file",&Engine::load_from_file);
 }
