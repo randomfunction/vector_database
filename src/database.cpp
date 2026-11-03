@@ -1,5 +1,10 @@
 #include"../include/database.hpp"
 #include<random>
+#include<cmath>
+#include<algorithm>
+#include<cstdint>
+
+using namespace std;
 
 Engine::Engine(MetricType m){
     metric=m;
@@ -7,6 +12,18 @@ Engine::Engine(MetricType m){
     mult=1.0/log(1.0*M);
     ep_id=-1;
     max_layer=-1;
+    has_simd=detect_simd();
+}
+
+bool Engine::detect_simd(){
+#if VDB_X86 && (defined(__GNUC__) || defined(__clang__))
+  #if defined(__GNUC__) && !defined(__clang__)
+    __builtin_cpu_init();
+  #endif
+    return __builtin_cpu_supports("avx2") && __builtin_cpu_supports("fma");
+#else
+    return false;
+#endif
 }
 
 void Engine::set_metric(MetricType m){
@@ -32,17 +49,55 @@ void Engine::reserve(size_t max_elements){
     }
 }
 
-float Engine::sum256(__m256 x) const{
-    __m128 lo=_mm256_extractf128_ps(x,0); 
-    __m128 hi= _mm256_extractf128_ps(x,1);
+// ---- Scalar kernels: portable, compiled on every target ----
+
+float Engine::l2_scalar(const float*a,const float*b) const{
+    float res=0;
+    for(int i=0;i<dim;i++){
+        float d=a[i]-b[i];
+        res+=d*d;
+    }
+    return res;
+}
+
+float Engine::dot_scalar(const float*a,const float*b) const{
+    float ans=0;
+    for(int i=0;i<dim;i++){
+        ans+=a[i]*b[i];
+    }
+    return ans;
+}
+
+float Engine::cosine_scalar(const float*a,const float*b) const{
+    float dot=0,normA=0,normB=0;
+    for(int i=0;i<dim;i++){
+        dot+=a[i]*b[i];
+        normA+=a[i]*a[i];
+        normB+=b[i]*b[i];
+    }
+    if(normA==0||normB==0){
+        return 0;
+    }
+    return dot/sqrt(normA*normB);
+}
+
+#if VDB_X86
+// ---- AVX2+FMA kernels: compiled on x86, chosen at runtime when the CPU
+// supports them. The target attribute enables AVX2/FMA codegen for just these
+// functions, so the rest of the binary stays at the portable baseline ISA. ----
+
+__attribute__((target("avx2,fma")))
+float Engine::sum256(__m256 x){
+    __m128 lo=_mm256_extractf128_ps(x,0);
+    __m128 hi=_mm256_extractf128_ps(x,1);
     __m128 sum=_mm_add_ps(lo, hi);
     sum=_mm_hadd_ps(sum,sum);
     sum=_mm_hadd_ps(sum,sum);
     return _mm_cvtss_f32(sum);
 }
 
-float Engine::squared_eucledian_distance(const float*a,const float*b) const{
-    float res=0;
+__attribute__((target("avx2,fma")))
+float Engine::l2_avx2(const float*a,const float*b) const{
     int i=0;
     __m256 sum=_mm256_setzero_ps();
     for(;i<=dim-8;i+=8){
@@ -51,15 +106,15 @@ float Engine::squared_eucledian_distance(const float*a,const float*b) const{
         __m256 diff=_mm256_sub_ps(va,vb);
         sum=_mm256_fmadd_ps(diff,diff,sum);
     }
-    res=sum256(sum);
+    float res=sum256(sum);
     for(;i<dim;i++){
         res+=(a[i]-b[i])*(a[i]-b[i]);
     }
     return res;
 }
 
-float Engine::dot_product(const float*a,const float*b) const{
-    float ans=0;
+__attribute__((target("avx2,fma")))
+float Engine::dot_avx2(const float*a,const float*b) const{
     int i=0;
     __m256 sum=_mm256_setzero_ps();
     for(;i<=dim-8;i+=8){
@@ -67,15 +122,15 @@ float Engine::dot_product(const float*a,const float*b) const{
         __m256 vb=_mm256_loadu_ps(b+i);
         sum=_mm256_fmadd_ps(va,vb,sum);
     }
-    ans=sum256(sum);
+    float ans=sum256(sum);
     for(;i<dim;i++){
         ans+=a[i]*b[i];
     }
     return ans;
 }
 
-float Engine::cosine_similarity(const float*a,const float*b) const{
-    float dot=0,normA=0,normB=0;
+__attribute__((target("avx2,fma")))
+float Engine::cosine_avx2(const float*a,const float*b) const{
     int i=0;
     __m256 s_dot=_mm256_setzero_ps();
     __m256 s_normA=_mm256_setzero_ps();
@@ -87,9 +142,9 @@ float Engine::cosine_similarity(const float*a,const float*b) const{
         s_normA=_mm256_fmadd_ps(va,va,s_normA);
         s_normB=_mm256_fmadd_ps(vb,vb,s_normB);
     }
-    dot=sum256(s_dot);
-    normA=sum256(s_normA);
-    normB=sum256(s_normB);
+    float dot=sum256(s_dot);
+    float normA=sum256(s_normA);
+    float normB=sum256(s_normB);
     for(;i<dim;i++){
         dot+=a[i]*b[i];
         normA+=a[i]*a[i];
@@ -98,20 +153,29 @@ float Engine::cosine_similarity(const float*a,const float*b) const{
     if(normA==0||normB==0){
         return 0;
     }
-    return dot/(sqrt(normA*normB));
+    return dot/sqrt(normA*normB);
 }
+#endif // VDB_X86
 
 float Engine::compute_distance(const float*a,const float*b) const{
     if(metric==MetricType::L2){
-        return squared_eucledian_distance(a,b);
+#if VDB_X86
+        if(has_simd) return l2_avx2(a,b);
+#endif
+        return l2_scalar(a,b);
     }
     else if(metric==MetricType::DOT){
-        return -dot_product(a,b);
+#if VDB_X86
+        if(has_simd) return -dot_avx2(a,b);
+#endif
+        return -dot_scalar(a,b);
     }
-    else if(metric==MetricType::COSINE){
-        return -cosine_similarity(a,b);
+    else{ // COSINE
+#if VDB_X86
+        if(has_simd) return -cosine_avx2(a,b);
+#endif
+        return -cosine_scalar(a,b);
     }
-    return 0;
 }
 
 int Engine::get_edge_offset(int node_offset,int layer) const{

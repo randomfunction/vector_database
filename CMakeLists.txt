@@ -3,7 +3,11 @@ project(VectorDatabase VERSION 1.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -ffast-math -DNDEBUG")
+# Portable baseline build: no -march=native. AVX2/FMA codegen is enabled
+# per-function via __attribute__((target(...))) in the distance kernels and
+# selected at runtime, so the binary runs on any x86-64 (and on ARM via the
+# scalar fallback) rather than only the build machine's CPU.
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -ffast-math -DNDEBUG")
 
 include_directories(${CMAKE_SOURCE_DIR}/include)
 
